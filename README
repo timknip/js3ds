@@ -6,15 +6,36 @@ No materials etc. yet.
 
 USAGE
 =======================================================
-
+Loading a 3ds file
+-------------------------------------------------------
 /**
- * @debugDiv is some div to log some stuff, ie: document.getElementById("myDebugDiv")
- * @bDebugging is a boolean indicating whether to log
+ * Load up a 3DS file
+ * @param url
  */
-var lib3ds = new Lib3ds(debugDiv, bDebugging);
+function loadFile(url) {
+	var req = new XMLHttpRequest();
 
-// read the file
-lib3ds.readFile(req.responseText);
+	if(req.overrideMimeType) {
+		req.overrideMimeType("text/plain; charset=x-user-defined"); // urgh, that took a while to google
+    }
+
+	req.onreadystatechange = function() {
+		if(req.readyState == 4) {
+			if(req.status == 0 || req.status == 200) {
+				// @debugDiv is some div to log some stuff, ie: document.getElementById("myDebugDiv")
+			  	// @bDebugging is a boolean indicating whether to log
+				var lib3ds = new Lib3ds(debugDiv, bDebugging);
+				
+				// read the 3DS
+				lib3ds.readFile(req.responseText);
+			}
+		}
+	}
+	req.open("GET", url, true); 
+	req.send(null);
+}
+-------------------------------------------------------
+After lib3ds.readFile() was called:
 
 // loop over the parsed meshes
 var i, j;
