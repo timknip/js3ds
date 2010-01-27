@@ -1,0 +1,53 @@
+=======================================================
+js3ds is a javascript library to read .3ds files.
+
+At the moment it only reads meshes: vertices, faces and texels. 
+No materials etc. yet.
+
+USAGE
+=======================================================
+
+/**
+ * @debugDiv is some div to log some stuff, ie: document.getElementById("myDebugDiv")
+ * @bDebugging is a boolean indicating whether to log
+ */
+var lib3ds = new Lib3ds(debugDiv, bDebugging);
+
+// read the file
+lib3ds.readFile(req.responseText);
+
+// loop over the parsed meshes
+var i, j;
+for (i = 0; i < lib3ds.meshes.length; i++) {
+	
+	var mesh = lib3ds.meshes[i]; // a mesh is of type Lib3dsMesh
+
+	// vertices
+	for (j = 0; j < mesh.points; j++) {
+		var vert = mesh.pointL[j]; // a vert is an Array(3)
+	}
+	
+	// faces
+	for (j = 0; j < mesh.faces; j++) {
+		var face = mesh.faceL[j] // a face is of type Lib3dsFace
+		
+		// indices into the vert array above
+		var idx0 = face.points[0];
+		var idx1 = face.points[1];
+		var idx2 = face.points[2];
+		
+		// so the face vertices are:
+		var v0 = mesh.pointL[ idx0 ];
+		var v1 = mesh.pointL[ idx1 ];
+		var v2 = mesh.pointL[ idx2 ];
+	}
+	
+	// texels / uv
+	for (j = 0; j < mesh.texels; j++) {
+		var uv = mesh.texelL[j];
+		
+		var u = uv[0];
+		var v = uv[1];
+	}
+}
+
