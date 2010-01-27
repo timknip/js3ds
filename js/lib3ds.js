@@ -305,12 +305,10 @@ with ({p:Lib3ds.prototype}) {
 				case POINT_ARRAY:
 					mesh.points = this.readWord(data);
 					mesh.pointL = [];
-					this.log (" -> #points: " + mesh.points);
-					for (i = 0; i < mesh.points; i++) {
+					this.log (" -> #points: " + mesh.points + " " + this.position);
+					for (i = 0; i < mesh.points-1; i++) {
 						var vec = [];
 						for (j = 0; j < 3; j++) {
-							vec.push(this.readFloat(data));
-							vec.push(this.readFloat(data));
 							vec.push(this.readFloat(data));
 						}
 						mesh.pointL.push(vec);
@@ -432,9 +430,13 @@ with ({p:Lib3ds.prototype}) {
 	}
 	
 	p.readFloat = function(data) {
+		try {
 		var v = this.parser.toFloat(data.substr(this.position, 4));
 		this.position += 4;
 		return v;
+		} catch(e) {
+			this.log("" + e + " " + this.position + " " + data.length);
+		}
 	}
 	
 	p.readInt = function(data) {

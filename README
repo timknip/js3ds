@@ -7,6 +7,12 @@ if you have experience with lib3ds, many objects will look familiar (Lib3dsMesh 
 At the moment only meshes are read: vertices, faces and texels. 
 No materials etc. yet.
 
+NOTE: 
+I didn't actually test this, so... one thing: Endian. 
+Default is now little endian, You might want to pass 'true' as
+first argument to the BinaryParser constructor to setup big endian.
+
+
 TODO
 =======================================================
 Much :-)
