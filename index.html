@@ -5,6 +5,7 @@
 		<script type="text/javascript" src="js/lib3ds.js"> </script>
 		<script type="text/javascript">
 			function loadFile(url) {
+
 				var req = new XMLHttpRequest();
 			
 				if(req.overrideMimeType) {
@@ -12,8 +13,10 @@
 			    }
 			
 				req.onreadystatechange = function() {
+					
 					if(req.readyState == 4) {
 						if(req.status == 0 || req.status == 200) {
+							
 							var lib3ds = new Lib3ds(document.getElementById("dbg"), true);
 							
 							lib3ds.readFile(req.responseText);
@@ -25,7 +28,8 @@
 			}
 		</script>
 	</head>
-	<body onload="loadFile('bobafett.3ds')">
+	<body onload="loadFile('planetPiano.3ds')">
 		<div id="dbg"></div>
+		<a href="http://dev.miaumiau.cat/webgl/planetPiano.3ds">dl</a>
 	</body>
 </html>

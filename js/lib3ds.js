@@ -231,7 +231,7 @@ with ({p:Lib3ds.prototype}) {
 		
 		var chunk = this.readChunk(data);
 		var c = 0;
-		
+
 		switch (chunk.id) {
 			case MLIBMAGIC:
 		    case CMAGIC:
@@ -257,6 +257,7 @@ with ({p:Lib3ds.prototype}) {
 				}
 				break;
 			default:
+				this.log("Unknown chunk: " + c.toString(16));
 				break;
 		}
 		alert("parsed #" + this.meshes.length + " meshes!");
@@ -306,7 +307,7 @@ with ({p:Lib3ds.prototype}) {
 					mesh.points = this.readWord(data);
 					mesh.pointL = [];
 					this.log (" -> #points: " + mesh.points + " " + this.position);
-					for (i = 0; i < mesh.points-1; i++) {
+					for (i = 0; i < mesh.points; i++) {
 						var vec = [];
 						for (j = 0; j < 3; j++) {
 							vec.push(this.readFloat(data));
@@ -357,8 +358,10 @@ with ({p:Lib3ds.prototype}) {
 			face.points.push(this.readWord(data));
 			face.points.push(this.readWord(data));
 			face.points.push(this.readWord(data));
-			face.flags = this.readWord(data);
 			
+			// visibility I believe (0 or 1)
+			face.flags = this.readWord(data);
+
 			mesh.faceL.push(face);
 		}
 		
