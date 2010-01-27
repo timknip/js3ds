@@ -1,7 +1,7 @@
 =======================================================
 js3ds is a javascript library to read .3ds files.
 
-At the moment it only reads meshes: vertices, faces and texels. 
+At the moment only meshes are read: vertices, faces and texels. 
 No materials etc. yet.
 
 USAGE
