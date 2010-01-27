@@ -71,7 +71,7 @@ for (i = 0; i < lib3ds.meshes.length; i++) {
 		var v2 = mesh.pointL[ idx2 ];
 	}
 	
-	// texels / uv
+	// texels / uv: guess you can use the face indices above
 	for (j = 0; j < mesh.texels; j++) {
 		var uv = mesh.texelL[j];
 		
