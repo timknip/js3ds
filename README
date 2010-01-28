@@ -12,6 +12,9 @@ I didn't actually test this, so... one thing: Endian.
 Default is now little endian, You might want to pass 'true' as
 first argument to the BinaryParser constructor to setup big endian.
 
+CREDITS
+=======================================================
+This library couldn't have been creeated without Jonas Raoni Soares Silva's BinaryParser: http://jsfromhell.com/classes/binary-parser
 
 TODO
 =======================================================
