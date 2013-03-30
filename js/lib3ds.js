@@ -230,7 +230,10 @@ with ({p:Lib3ds.prototype}) {
 		this.meshes = [];
 		this.materials = {};
 
-		var data = new jDataView(fileContents);
+		var data = new jDataView(fileContents,
+								 0,  // offset
+								 undefined, // byte length. let the library calculate that.
+								 true); // little endian
 		var chunk = this.readChunk(data);
 		var c = 0;
 
@@ -443,7 +446,7 @@ with ({p:Lib3ds.prototype}) {
 					this.log(" -> MATERIAL_GROUP");
 					this.resetPosition(data);
 					var materialGroup = this.readMaterialGroup(data);
-					
+
 					var faceIdxs = materialGroup.faceIdxs;
 					for (i = 0; i < faceIdxs.length; i++) {
 						var face = mesh.faceL[faceIdxs[i]];
@@ -458,13 +461,13 @@ with ({p:Lib3ds.prototype}) {
 
 			this.endChunk(chunk);
 		}
-		
+
 		this.endChunk(chunk);
 	}
 
 	p.readMaterialGroup = function(data) {
 		var chunk = this.readChunk(data);
-	
+
 		var materialName = this.readString(data, 64);
 		var numFaces = this.readWord(data);
 
@@ -540,14 +543,14 @@ with ({p:Lib3ds.prototype}) {
 	}
 
 	p.readByte = function(data) {
-		var v = data.getUint8(this.position, true);
+		var v = data.getUint8(this.position);
 		this.position += 1;
 		return v;
 	}
 
 	p.readFloat = function(data) {
 		try {
-			var v = data.getFloat32(this.position, true);
+			var v = data.getFloat32(this.position);
 			this.position += 4;
 			return v;
 		} catch(e) {
@@ -556,25 +559,25 @@ with ({p:Lib3ds.prototype}) {
 	}
 
 	p.readInt = function(data) {
-		var v = data.getInt32(this.position, true);
+		var v = data.getInt32(this.position);
 		this.position += 4;
 		return v;
 	}
 
 	p.readShort = function(data) {
-		var v = data.getInt16(this.position, true);
+		var v = data.getInt16(this.position);
 		this.position += 2;
 		return v;
 	}
 
 	p.readDWord = function(data) {
-		var v = data.getUint32(this.position, true);
+		var v = data.getUint32(this.position);
 		this.position += 4;
 		return v;
 	}
 
 	p.readWord = function(data) {
-		var v = data.getUint16(this.position, true);
+		var v = data.getUint16(this.position);
 		this.position += 2;
 		return v;
 	}
