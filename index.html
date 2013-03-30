@@ -16,7 +16,7 @@
 
           if(req.readyState == 4) {
             if(req.status == 0 || req.status == 200) {
-
+              // Note that turning on debugging makes reading the file much slower.
               var lib3ds = new Lib3ds(document.getElementById("dbg"), true);
               lib3ds.readFile(req.responseText);
             }
