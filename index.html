@@ -1,34 +1,33 @@
 <html>
-	<head>
-		<title>WebGL</title>
-		<script type="text/javascript" src="js/binary-parser.js"> </script>
-		<script type="text/javascript" src="js/lib3ds.js"> </script>
-		<script type="text/javascript">
-			function loadFile(url) {
+  <head>
+    <title>WebGL</title>
+    <script type="text/javascript" src="js/jdataview.js"> </script>
+    <script type="text/javascript" src="js/lib3ds.js"> </script>
+    <script type="text/javascript">
+      function loadFile(url) {
 
-				var req = new XMLHttpRequest();
-			
-				if(req.overrideMimeType) {
-					req.overrideMimeType("text/plain; charset=x-user-defined");
-			    }
-			
-				req.onreadystatechange = function() {
-					
-					if(req.readyState == 4) {
-						if(req.status == 0 || req.status == 200) {
-							
-							var lib3ds = new Lib3ds(document.getElementById("dbg"), true);
-							
-							lib3ds.readFile(req.responseText);
-						}
-					}
-				}
-				req.open("GET", url, true); 
-				req.send(null);
-			}
-		</script>
-	</head>
-	<body onload="loadFile('MIG-21.3ds')">
-		<div id="dbg"></div>
-	</body>
+        var req = new XMLHttpRequest();
+
+        if(req.overrideMimeType) {
+          req.overrideMimeType("text/plain; charset=x-user-defined");
+        }
+
+        req.onreadystatechange = function() {
+
+          if(req.readyState == 4) {
+            if(req.status == 0 || req.status == 200) {
+
+              var lib3ds = new Lib3ds(document.getElementById("dbg"), true);
+              lib3ds.readFile(req.responseText);
+            }
+          }
+        }
+        req.open("GET", url, true);
+        req.send(null);
+      }
+    </script>
+  </head>
+  <body onload="loadFile('MIG-21.3ds')">
+    <div id="dbg"></div>
+  </body>
 </html>

@@ -214,21 +214,21 @@ var VIEWPORT_LAYOUT = 0x7001;
 var VIEWPORT_DATA = 0x7011;
 var VIEWPORT_DATA_3 = 0x7012;
 var VIEWPORT_SIZE = 0x7020;
-var NETWORK_VIEW = 0x7030;	
+var NETWORK_VIEW = 0x7030;
 
 Lib3ds = function(element, debug) {
 	this.element = element;
 	this.debug = debug != undefined ? debug : false;
-	this.parser = new BinaryParser(false, false);
 	this.position = 0;
 	this.meshes = [];
 };
 
 with ({p:Lib3ds.prototype}) {
-	p.readFile = function(data) {
+	p.readFile = function(fileContents) {
 		this.position = 0;
 		this.meshes = [];
-		
+
+		var data = new jDataView(fileContents);
 		var chunk = this.readChunk(data);
 		var c = 0;
 
@@ -260,13 +260,13 @@ with ({p:Lib3ds.prototype}) {
 				this.log("Unknown chunk: " + c.toString(16));
 				break;
 		}
-		alert("parsed #" + this.meshes.length + " meshes!");
+		this.log("parsed #" + this.meshes.length + " meshes!");
 	}
-	
+
 	p.readMDATA = function(data) {
 		var chunk = this.readChunk(data);
 		var c = this.nextChunk(data, chunk);
-		
+
 		while (c != 0) {
 			switch (c) {
 				case MESH_VERSION:
@@ -288,13 +288,13 @@ with ({p:Lib3ds.prototype}) {
 			c = this.nextChunk(data, chunk);
 		}
 	}
-	
+
 	p.readMesh = function(data) {
 		var chunk = this.readChunk(data);
 		var c = this.nextChunk(data, chunk);
 		var mesh = new Lib3dsMesh();
 		var i, j;
-		
+
 		while (c != 0) {
 			switch (c) {
 				case MESH_MATRIX:
@@ -336,48 +336,48 @@ with ({p:Lib3ds.prototype}) {
 			}
 			c = this.nextChunk(data, chunk);
 		}
-		
+
 		this.endChunk(chunk);
-		
+
 		return mesh;
 	}
-	
+
 	p.readFaceArray = function(data, mesh) {
 		var chunk = this.readChunk(data);
 		var i, j;
-		
+
 		mesh.faces = this.readWord(data);
 		mesh.faceL = [];
-		
+
 		this.log (" -> #faces: " + mesh.faces);
-		
+
 		for(i = 0; i < mesh.faces; ++i) {
 			var face = new Lib3dsFace();
-			
+
 			face.points = [];
 			face.points.push(this.readWord(data));
 			face.points.push(this.readWord(data));
 			face.points.push(this.readWord(data));
-			
+
 			// visibility I believe (0 or 1)
 			face.flags = this.readWord(data);
 
 			mesh.faceL.push(face);
 		}
-		
+
 	}
-	
+
 	p.readNamedObject = function(data) {
 		var chunk = this.readChunk(data);
-		
+
 		var name = this.readString(data, 64);
-		
+
 		this.log(" -> " + name);
-		
+
 		chunk.cur = this.position;
-		
+
 		var c = this.nextChunk(data, chunk);
-		
+
 		while (c != 0) {
 			switch (c) {
 				case N_TRI_OBJECT:
@@ -390,24 +390,24 @@ with ({p:Lib3ds.prototype}) {
 			}
 			c = this.nextChunk(data, chunk);
 		}
-		
+
 		this.endChunk(chunk);
 	}
-	
+
 	p.readChunk = function(data) {
 		var chunk = new Lib3dsChunk();
 		chunk.cur = this.position;
 		chunk.id = this.readWord(data);
 		chunk.size = this.readDWord(data);
 		chunk.end = chunk.cur + chunk.size;
-	  	chunk.cur += 6;
+		chunk.cur += 6;
 		return chunk;
 	}
-	
+
 	p.endChunk = function(chunk) {
 		this.position = chunk.end;
 	}
-	
+
 	p.nextChunk = function(data, chunk) {
 		if (chunk.cur >= chunk.end) {
 			return 0;
@@ -418,54 +418,55 @@ with ({p:Lib3ds.prototype}) {
 			chunk.cur += next.size;
 			return next.id;
 		} catch(e) {
+			this.log('Unable to read chunk at ' + this.position);
 			return 0;
 		}
 	}
-	
+
 	p.resetPosition = function(data, chunk) {
 		this.position -= 6;
 	}
-	
+
 	p.readByte = function(data) {
-		var v = this.parser.toByte(data.substr(this.position, 1));
+		var v = data.getUint8(this.position, true);
 		this.position += 1;
 		return v;
 	}
-	
+
 	p.readFloat = function(data) {
 		try {
-		var v = this.parser.toFloat(data.substr(this.position, 4));
-		this.position += 4;
-		return v;
+			var v = data.getFloat32(this.position, true);
+			this.position += 4;
+			return v;
 		} catch(e) {
-			this.log("" + e + " " + this.position + " " + data.length);
+			this.log("" + e + " " + this.position + " " + data.byteLength);
 		}
 	}
-	
+
 	p.readInt = function(data) {
-		var v = this.parser.toInt(data.substr(this.position, 4));
+		var v = data.getInt32(this.position, true);
 		this.position += 4;
 		return v;
 	}
-	
+
 	p.readShort = function(data) {
-		var v = this.parser.toShort(data.substr(this.position, 2));
+		var v = data.getInt16(this.position, true);
 		this.position += 2;
 		return v;
 	}
-	
+
 	p.readDWord = function(data) {
-		var v = this.parser.toDWord(data.substr(this.position, 4));
+		var v = data.getUint32(this.position, true);
 		this.position += 4;
 		return v;
 	}
-	
+
 	p.readWord = function(data) {
-		var v = this.parser.toWord(data.substr(this.position, 2));
+		var v = data.getUint16(this.position, true);
 		this.position += 2;
 		return v;
 	}
-	
+
 	p.readString = function(data, maxLength) {
 		var s = "";
 		for(var i = 0; i < maxLength; i++) {
@@ -475,9 +476,14 @@ with ({p:Lib3ds.prototype}) {
 		}
 		return s;
 	}
-	
+
 	p.log = function(msg) {
-		if(this.debug) this.element.innerHTML += msg + "<br/>";
+		if(this.debug) {
+			console.log(msg);
+			if (this.element) {
+				this.element.innerHTML += msg + "<br/>";
+			}
+		}
 	}
 };
 
