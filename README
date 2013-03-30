@@ -1,20 +1,22 @@
 =======================================================
 js3ds is a javascript library to read .3ds files.
 
-The library is inspired by lib3ds : http://code.google.com/p/lib3ds/, so, 
+The library is inspired by lib3ds : http://code.google.com/p/lib3ds/, so,
 if you have experience with lib3ds, many objects will look familiar (Lib3dsMesh etc.).
 
-At the moment only meshes are read: vertices, faces and texels. 
-No materials etc. yet.
+At the moment only meshes are read: vertices, faces, texels, and some material properties.
 
-NOTE: 
-I didn't actually test this, so... one thing: Endian. 
-Default is now little endian, You might want to pass 'true' as
-first argument to the BinaryParser constructor to setup big endian.
+NOTE:
+I didn't actually test this, so... one thing: Endian.
+Default is now little endian, You might want to pass 'false' as
+the 4th argumang to the jDataView constructor to setup big endian.
 
 CREDITS
 =======================================================
-This library couldn't have been creeated without Jonas Raoni Soares Silva's BinaryParser: http://jsfromhell.com/classes/binary-parser
+This library couldn't have been created without Jonas Raoni Soares Silva's BinaryParser: http://jsfromhell.com/classes/binary-parser.
+Although recent version have started using jDataVew, a big thank you to Jonas to let us get the ball rolling.
+
+Speaking of jDataView, thanks to Christopher Chedeau for implementing it: https://github.com/vjeux/jDataView.
 
 TODO
 =======================================================
@@ -34,7 +36,7 @@ function loadFile(url) {
 
 	if(req.overrideMimeType) {
 		req.overrideMimeType("text/plain; charset=x-user-defined"); // urgh, that took a while to google
-    }
+	}
 
 	req.onreadystatechange = function() {
 		if(req.readyState == 4) {
@@ -42,13 +44,13 @@ function loadFile(url) {
 				// @debugDiv is some div to log some stuff, ie: document.getElementById("myDebugDiv")
 			  	// @bDebugging is a boolean indicating whether to log
 				var lib3ds = new Lib3ds(debugDiv, bDebugging);
-				
+
 				// read the 3DS
 				lib3ds.readFile(req.responseText);
 			}
 		}
 	}
-	req.open("GET", url, true); 
+	req.open("GET", url, true);
 	req.send(null);
 }
 -------------------------------------------------------
@@ -57,33 +59,39 @@ After lib3ds.readFile() was called:
 // loop over the parsed meshes
 var i, j;
 for (i = 0; i < lib3ds.meshes.length; i++) {
-	
+
 	var mesh = lib3ds.meshes[i]; // a mesh is of type Lib3dsMesh
 
 	// vertices
 	for (j = 0; j < mesh.points; j++) {
 		var vert = mesh.pointL[j]; // a vert is an Array(3)
 	}
-	
+
 	// faces
 	for (j = 0; j < mesh.faces; j++) {
 		var face = mesh.faceL[j] // a face is of type Lib3dsFace
-		
+
 		// indices into the vert array above
 		var idx0 = face.points[0];
 		var idx1 = face.points[1];
 		var idx2 = face.points[2];
-		
+
 		// so the face vertices are:
 		var v0 = mesh.pointL[ idx0 ];
 		var v1 = mesh.pointL[ idx1 ];
 		var v2 = mesh.pointL[ idx2 ];
+
+		// and the material for the face is:
+		var materialName = face.material;
+		var material = lib3ds.materials[materialName];
+		var ambientColor = material.ambientColor;
+		// etc....
 	}
-	
+
 	// texels / uv: guess you can use the face indices above
 	for (j = 0; j < mesh.texels; j++) {
 		var uv = mesh.texelL[j];
-		
+
 		var u = uv[0];
 		var v = uv[1];
 	}
