@@ -214,21 +214,26 @@ var VIEWPORT_LAYOUT = 0x7001;
 var VIEWPORT_DATA = 0x7011;
 var VIEWPORT_DATA_3 = 0x7012;
 var VIEWPORT_SIZE = 0x7020;
-var NETWORK_VIEW = 0x7030;	
+var NETWORK_VIEW = 0x7030;
 
 Lib3ds = function(element, debug) {
 	this.element = element;
 	this.debug = debug != undefined ? debug : false;
-	this.parser = new BinaryParser(false, false);
 	this.position = 0;
 	this.meshes = [];
+	this.materials = {};
 };
 
 with ({p:Lib3ds.prototype}) {
-	p.readFile = function(data) {
+	p.readFile = function(fileContents) {
 		this.position = 0;
 		this.meshes = [];
-		
+		this.materials = {};
+
+		var data = new jDataView(fileContents,
+								 0,  // offset
+								 undefined, // byte length. let the library calculate that.
+								 true); // little endian
 		var chunk = this.readChunk(data);
 		var c = 0;
 
@@ -249,56 +254,123 @@ with ({p:Lib3ds.prototype}) {
 							this.readMDATA(data);
 							break;
 						case KFDATA: // Keyframe data
-							break;
 						default:
+							this.log("Unknown chunk: " + c.toString(16));
 							break;
 					}
 					c = this.nextChunk(data, chunk);
 				}
 				break;
 			default:
-				this.log("Unknown chunk: " + c.toString(16));
+				this.log("Unknown main chunk: " + c.toString(16));
 				break;
 		}
-		alert("parsed #" + this.meshes.length + " meshes!");
+		this.log("parsed #" + this.meshes.length + " meshes!");
 	}
-	
+
 	p.readMDATA = function(data) {
 		var chunk = this.readChunk(data);
 		var c = this.nextChunk(data, chunk);
-		
+
 		while (c != 0) {
 			switch (c) {
 				case MESH_VERSION:
 					this.mesh_version = this.readInt(data);
-					this.log( "MESH_VERSION: " + this.mesh_version );
+					this.log("MESH_VERSION: " + this.mesh_version);
 					break;
 				case MASTER_SCALE:
 					this.master_scale = this.readFloat(data);
-					this.log( "MASTER_SCALE: " + this.master_scale );
+					this.log("MASTER_SCALE: " + this.master_scale);
 					break;
 				case NAMED_OBJECT:
 					this.resetPosition(data);
 					this.log("NAMED OBJECT");
 					this.readNamedObject(data);
 					break;
+				case MAT_ENTRY:
+					this.resetPosition(data);
+					this.log("MATERIAL ENTRY");
+					this.readMaterialEntry(data);
+					break;
 				default:
+					this.log("Unknown MDATA chunk: " + c.toString(16));
 					break;
 			}
 			c = this.nextChunk(data, chunk);
 		}
 	}
-	
+
+	p.readMaterialEntry = function(data) {
+		var chunk = this.readChunk(data);
+		var c = this.nextChunk(data, chunk);
+
+		var material = new Lib3dsMaterial();
+
+		while (c != 0) {
+			switch (c) {
+				case MAT_NAME:
+					material.name = this.readString(data, 64);
+					this.log(" -> name: " + material.name);
+					break;
+				case MAT_AMBIENT:
+					material.ambientColor = this.readColor(data);
+					this.log(" -> ambientColor: " + material.ambientColor.toString(16));
+					break;
+				case MAT_DIFFUSE:
+					material.diffuseColor = this.readColor(data);
+					this.log(" -> diffuseColor: " + material.diffuseColor.toString(16));
+					break;
+				case MAT_SPECULAR:
+					material.specularColor = this.readColor(data);
+					this.log(" -> specularColor: " + material.specularColor.toString(16));
+					break;
+				default:
+					this.log(" -> Unknown material chunk: " + c.toString(16));
+					break;
+			}
+			c = this.nextChunk(data, chunk);
+		}
+
+		this.endChunk(chunk);
+		this.materials[material.name] = material;
+	}
+
+	p.readColor = function(data) {
+		var chunk = this.readChunk(data);
+
+		var color = 0;
+		switch (chunk.id) {
+			case COLOR_24:
+			case LIN_COLOR_24:
+				var r = this.readByte(data);
+				var g = this.readByte(data);
+				var b = this.readByte(data);
+				color = r << 16 | g << 8 | b;
+				break;
+			case COLOR_F:
+			case LIN_COLOR_F:
+				var r = this.readFloat(data);
+				var g = this.readFloat(data);
+				var b = this.readFloat(data);
+				color = Math.floor(r * 255) << 16 | Math.floor(g * 255) << 8 | Math.floor(b * 255);
+				break;
+			default:
+				this.log("Unknown color chunk: " + c.toString(16));
+				break;
+		}
+
+		this.endChunk(chunk);
+		return color;
+	}
+
 	p.readMesh = function(data) {
 		var chunk = this.readChunk(data);
 		var c = this.nextChunk(data, chunk);
 		var mesh = new Lib3dsMesh();
 		var i, j;
-		
+
 		while (c != 0) {
 			switch (c) {
-				case MESH_MATRIX:
-					break;
 				case MESH_COLOR:
 					mesh.color = this.readByte(data);
 					this.log (" -> color: " + mesh.color);
@@ -315,13 +387,9 @@ with ({p:Lib3ds.prototype}) {
 						mesh.pointL.push(vec);
 					}
 					break;
-				case POINT_FLAG_ARRAY:
-					break;
 				case FACE_ARRAY:
 					this.resetPosition(data);
 					this.readFaceArray(data, mesh);
-					break;
-				case MESH_TEXTURE_INFO:
 					break;
 				case TEX_VERTS:
 					mesh.texels = this.readWord(data);
@@ -331,53 +399,99 @@ with ({p:Lib3ds.prototype}) {
 						mesh.texelL.push([this.readFloat(data), this.readFloat(data)]);
 					}
 					break;
+				case MESH_MATRIX:
+				case POINT_FLAG_ARRAY:
+				case MESH_TEXTURE_INFO:
 				default:
+					this.log(" -> Unknown mesh chunk: " + c.toString(16));
 					break;
 			}
 			c = this.nextChunk(data, chunk);
 		}
-		
+
 		this.endChunk(chunk);
-		
+
 		return mesh;
 	}
-	
+
 	p.readFaceArray = function(data, mesh) {
 		var chunk = this.readChunk(data);
 		var i, j;
-		
+
 		mesh.faces = this.readWord(data);
 		mesh.faceL = [];
-		
+
 		this.log (" -> #faces: " + mesh.faces);
-		
+
 		for(i = 0; i < mesh.faces; ++i) {
 			var face = new Lib3dsFace();
-			
+
 			face.points = [];
 			face.points.push(this.readWord(data));
 			face.points.push(this.readWord(data));
 			face.points.push(this.readWord(data));
-			
+
 			// visibility I believe (0 or 1)
 			face.flags = this.readWord(data);
 
 			mesh.faceL.push(face);
 		}
-		
+
+		// Thr rest of the FACE_ARRAY chunk is subchunks
+		while (this.position < chunk.end) {
+			var chunk = this.readChunk(data);
+
+			switch (chunk.id) {
+				case MSH_MAT_GROUP:
+					this.log(" -> MATERIAL_GROUP");
+					this.resetPosition(data);
+					var materialGroup = this.readMaterialGroup(data);
+
+					var faceIdxs = materialGroup.faceIdxs;
+					for (i = 0; i < faceIdxs.length; i++) {
+						var face = mesh.faceL[faceIdxs[i]];
+						face.material = materialGroup.name;
+					}
+					break;
+				case SMOOTH_GROUP:
+				default:
+					this.log(" -> Unknown face array chunk: " + c.toString(16));
+					break;
+			}
+
+			this.endChunk(chunk);
+		}
+
+		this.endChunk(chunk);
 	}
-	
+
+	p.readMaterialGroup = function(data) {
+		var chunk = this.readChunk(data);
+
+		var materialName = this.readString(data, 64);
+		var numFaces = this.readWord(data);
+
+		this.log(" --> material name: " + materialName);
+		this.log(" --> num faces: " + numFaces);
+
+		var faceIdxs = [];
+		for(var i = 0; i < numFaces; ++i) {
+			faceIdxs.push(this.readWord(data));
+		}
+		return {name: materialName, faceIdxs: faceIdxs};
+	}
+
 	p.readNamedObject = function(data) {
 		var chunk = this.readChunk(data);
-		
+
 		var name = this.readString(data, 64);
-		
+
 		this.log(" -> " + name);
-		
+
 		chunk.cur = this.position;
-		
+
 		var c = this.nextChunk(data, chunk);
-		
+
 		while (c != 0) {
 			switch (c) {
 				case N_TRI_OBJECT:
@@ -386,28 +500,29 @@ with ({p:Lib3ds.prototype}) {
 					this.meshes.push(mesh);
 					break;
 				default:
+					this.log("Unknown named object chunk: " + c.toString(16));
 					break;
 			}
 			c = this.nextChunk(data, chunk);
 		}
-		
+
 		this.endChunk(chunk);
 	}
-	
+
 	p.readChunk = function(data) {
 		var chunk = new Lib3dsChunk();
 		chunk.cur = this.position;
 		chunk.id = this.readWord(data);
 		chunk.size = this.readDWord(data);
 		chunk.end = chunk.cur + chunk.size;
-	  	chunk.cur += 6;
+		chunk.cur += 6;
 		return chunk;
 	}
-	
+
 	p.endChunk = function(chunk) {
 		this.position = chunk.end;
 	}
-	
+
 	p.nextChunk = function(data, chunk) {
 		if (chunk.cur >= chunk.end) {
 			return 0;
@@ -418,54 +533,55 @@ with ({p:Lib3ds.prototype}) {
 			chunk.cur += next.size;
 			return next.id;
 		} catch(e) {
+			this.log('Unable to read chunk at ' + this.position);
 			return 0;
 		}
 	}
-	
+
 	p.resetPosition = function(data, chunk) {
 		this.position -= 6;
 	}
-	
+
 	p.readByte = function(data) {
-		var v = this.parser.toByte(data.substr(this.position, 1));
+		var v = data.getUint8(this.position);
 		this.position += 1;
 		return v;
 	}
-	
+
 	p.readFloat = function(data) {
 		try {
-		var v = this.parser.toFloat(data.substr(this.position, 4));
-		this.position += 4;
-		return v;
+			var v = data.getFloat32(this.position);
+			this.position += 4;
+			return v;
 		} catch(e) {
-			this.log("" + e + " " + this.position + " " + data.length);
+			this.log("" + e + " " + this.position + " " + data.byteLength);
 		}
 	}
-	
+
 	p.readInt = function(data) {
-		var v = this.parser.toInt(data.substr(this.position, 4));
+		var v = data.getInt32(this.position);
 		this.position += 4;
 		return v;
 	}
-	
+
 	p.readShort = function(data) {
-		var v = this.parser.toShort(data.substr(this.position, 2));
+		var v = data.getInt16(this.position);
 		this.position += 2;
 		return v;
 	}
-	
+
 	p.readDWord = function(data) {
-		var v = this.parser.toDWord(data.substr(this.position, 4));
+		var v = data.getUint32(this.position);
 		this.position += 4;
 		return v;
 	}
-	
+
 	p.readWord = function(data) {
-		var v = this.parser.toWord(data.substr(this.position, 2));
+		var v = data.getUint16(this.position);
 		this.position += 2;
 		return v;
 	}
-	
+
 	p.readString = function(data, maxLength) {
 		var s = "";
 		for(var i = 0; i < maxLength; i++) {
@@ -475,9 +591,14 @@ with ({p:Lib3ds.prototype}) {
 		}
 		return s;
 	}
-	
+
 	p.log = function(msg) {
-		if(this.debug) this.element.innerHTML += msg + "<br/>";
+		if(this.debug) {
+			console.log(msg);
+			if (this.element) {
+				this.element.innerHTML += msg + "<br/>";
+			}
+		}
 	}
 };
 
@@ -491,6 +612,7 @@ Lib3dsChunk = function() {
 Lib3dsFace = function() {
 	this.flags = 0;
 	this.points = [];
+	this.material = "";
 };
 
 Lib3dsMesh = function() {
@@ -506,5 +628,12 @@ Lib3dsMesh = function() {
 	this.texelL = [];
 	this.faces = 0;
 	this.faceL = [];
+};
+
+Lib3dsMaterial = function() {
+	this.name = "";
+	this.ambientColor = 0;
+	this.diffuseColor = 0;
+	this.spectralColor = 0;
 };
 
